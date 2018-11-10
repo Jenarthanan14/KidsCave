@@ -1,10 +1,9 @@
 <?php
 session_start();
-require_once 'class.user.php';
+require_once 'backend/class.user.php';
+
 include_once($_SERVER['DOCUMENT_ROOT'].'/KidsCave/backend/dbconfig.php');
-$user_login = new USER();
-
-
+$user_login = new User();
 if(!$user_login->is_logged_in())
 {
 	$user_login->redirect('index.php');
@@ -12,8 +11,6 @@ if(!$user_login->is_logged_in())
 if($_SESSION['userRole']== "Admin" && $_SESSION['userRole']== "Principal" ){
 	$user_login->redirect('../backend/payments.php');
 }
-
-
 ?>
 
 <!-- top html header -->
@@ -39,10 +36,10 @@ if($_SESSION['userRole']== "Admin" && $_SESSION['userRole']== "Principal" ){
 					<br />  
 				<label>Select Day:</label>  
 					<input type="radio" value='Monday' name="day" />Monday
-					<input type="radio" value='Monday' name="day"  />Tuesday
-					<input type="radio" value='Monday' name="day" />Wednesday
-					<input type="radio" value='Monday' name="day" />Thursday
-					<input type="radio" value='Monday' name="day" />Friday  
+					<input type="radio" value='Tuesday' name="day"  />Tuesday
+					<input type="radio" value='Wednesday' name="day" />Wednesday
+					<input type="radio" value='Thursday' name="day" />Thursday
+					<input type="radio" value='Friday' name="day" />Friday  
 					<br /><br />
 					<button type="button" name="action" id="action" class="btn btn-primary" style="width:25%;">Get Time Table</button>
 			<span id="txtHint"></span>
@@ -55,11 +52,13 @@ if($_SESSION['userRole']== "Admin" && $_SESSION['userRole']== "Principal" ){
 $(document).ready(function(){
 $('#action').click(function(){ 
 		   var class1=$('input[name=class1]:checked').val(); 
-           //var class1 = $('class1').attr('id');  
+
+           //var class1 = $('class1').attr('id');
            var day =$('input[name=day]:checked').val();
 		   console.log(class1) 
 		   console.log(day)   
-           if(class1 != '' && day != ''){  
+
+           if(class1 != undefined && day != undefined){  
                 $.ajax({  
                      url : "timetable_ajax_show.php",  
                      method:"POST",  

@@ -1,230 +1,26 @@
 <?php
 
 session_start();
-require_once 'class.user.php';
-include_once($_SERVER['DOCUMENT_ROOT'].'/KidsCave/backend/dbconfig.php');
+require_once 'backend/class.user.php';
 
-$user_login = new USER();
+
+$user_login = new User();
+
+/**check user is logged in**/
 
 if(!$user_login->is_logged_in()){
 	$user_login->redirect('index.php');
 }
-if($_SESSION['userRole']== "Admin" && $_SESSION['userRole']== "Principal" && $_SESSION['userRole']== "Teacher"){
+if($_SESSION['userRole']== "Admin" && $_SESSION['userRole']== "Principal"){
 	$user_login->redirect('../backend/payments.php');
 }
-
- $output = '';
- $total = 0;
- $amountpaid = 0;
- $newdate1='2012-01-01';
-$sql1 = "SELECT totalAmount,startDate,endDate FROM `student_payment` where paymentYear='".date("Y")."' AND userID='".$_SESSION['userSession']."' ORDER BY endDate ASC";
-$result1 = mysqli_query($connect, $sql1);
-if(mysqli_num_rows($result1) > 0){
- while($row1 = mysqli_fetch_array($result1)){
-	 $amountpaid = $amountpaid + $row1["totalAmount"];
-	 $startDate=$row1["endDate"];
- }
-	
-}else{
-	$amountpaid = 0;
-	$startDate=date("Y").'-01-01';
-} 
-
-$sql = "SELECT * FROM `student_payment_detail`";
-$result = mysqli_query($connect, $sql);
-                $output .= '  
-                     <table class="table table-bordered">  
-                          <tr>  
-                               <th width="50%" class="text-center">Description</th>  
-                               <th width="50%" class="text-center">Amount (Rs)</th>  
-                          </tr>  
-                ';  
-                if(mysqli_num_rows($result) > 0){
-					
-                    while($row = mysqli_fetch_array($result)){						
-                          $output .= '  
-                               <tr>  
-                                    <td>'.$row["description"].'</td>  
-                                    <td class="text-right">'.number_format($row["totalAmount"],2).'</td>  
-                               </tr>  
-							';
-							
-							$total = $total + (int) $row["totalAmount"];							
-					}
-					$output .= '  
-                               <tr>  
-                                    <td>Total</td>  
-                                    <td class="text-right">'.number_format($total,2).'</td>  
-                               </tr>
-							';
-					$output .= '  
-                               <tr>  
-                                    <td>Amount paid</td>  
-                                    <td class="text-right">'.number_format($amountpaid,2).'</td>  
-                               </tr>
-							';
-					$dueAmount =$total-$amountpaid;
-					$output .= '  
-                               <tr>  
-                                    <td>Amount Due</td>  
-                                    <td class="text-right">'.number_format($dueAmount,2).'</td>  
-                               </tr>
-							';
-							
-				}else{  
-				
-                     $output .= '  
-                          <tr>  
-                               <td colspan="4">Data not Found</td>  
-                          </tr>  
-                     '; 
-					 
-                }  
-                 
-
-                
-
-
-$paymentMethodErr = $paymentDurationErr = $nameErr = $cardNumberErr = $cvvErr = $durationErr = $paymentMethodErr ="";
-$paymentMethod = $paymentDuration = $name = $cardNumber = $cvv = $duration = $paymentMethod = "";
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-	
-	if ( (int)($dueAmount)<=0 ){
-		$paymentDurationErr = "Sorry you don't have any due payments";
-		
-	} elseif(empty($_POST["PaymentDurationOption"])){
-		$paymentDurationErr = "Select payment duration";
-		
-	} elseif( ($amountpaid != 0) && ($_POST["PaymentDurationOption"]=="Year") ) {
-		$paymentDurationErr = "You cannot pay for a year";
-		
-	} elseif( ($_POST["PaymentDurationOption"]=="Year") ){
-		$paymentDuration = $_POST["PaymentDurationOption"];
-		$newdate1 = strtotime ( '+12 months' , strtotime($startDate) ) ; //adding 12 months into start date
-		$newdate1 = date ( 'Y-m-j' , $newdate1 );
-		
-		$totalAmount = $total;
-		$discount = 15;
-		$amountPaid = ($total*0.85);
-		
-		
-	}elseif( ($_POST["PaymentDurationOption"]=="Term") ){	
-		$paymentDuration = $_POST["PaymentDurationOption"];			
-		$newdate1 = strtotime ( '+4 months' , strtotime($startDate) ) ; //adding 4 months into start date
-		$newdate1 = date ( 'Y-m-j' , $newdate1 );
-		
-		
-		if($dueAmount<($total/3)){
-			$totalAmount = $dueAmount;
-			$discount = 0;
-			$amountPaid = $dueAmount;
-		}else{
-			$totalAmount = $total/3;
-			$discount = 0;
-			$amountPaid = $total/3;
-		}
-		
-		
-	} else {
-		$paymentDurationErr = "Invalid payment duration";
-	}
-	
-	if (empty($_POST["PaymentMethodOption"])) {
-		$paymentMethodErr = "Select payment method";
-		
-	} elseif( !empty($_POST["PaymentMethodOption"]) && ($_POST["PaymentMethodOption"] == 'Card') ) {
-		
-		$paymentMethod = test_input($_POST["PaymentMethodOption"]);
-		
-		if (empty($_POST["name"])) {
-			$nameErr = "Name is required";
-		} else {
-			$name = test_input($_POST["name"]);
-			if (!preg_match("/^[a-zA-Z ]*$/",$name)) {
-			$nameErr = "Only letters and white space allowed"; 
-			}
-		}
-	  
-		if (empty($_POST["cardNumber"])) {
-			$cardNumberErr = "Card Number is required";
-		} else {
-			$cardNumber = test_input($_POST["cardNumber"]);
-			if (!preg_match("/^[0-9]{16,19}$/",$cardNumber)){
-			$cardNumberErr = "Invalid Card Number"; 
-			}
-		}
-		
-		if (empty($_POST["validTill"])) {
-			$durationErr = "Validity period is required";
-		} else {
-			$duration = test_input($_POST["validTill"]);
-			if (!validateMonth($duration)) {
-			$durationErr = "Date is not valid"; 
-			}
-		}
-
-		if (empty($_POST["cvv"])) {
-			$cvvErr = "CVV is required";
-		} else {
-			$cvv = test_input($_POST["cvv"]);
-			if (!preg_match("/^[0-9]{3}$/",$cvv)) {
-			$cvvErr = "Only 3 numbers allowed"; 
-			}
-		} 
-	} elseif( (!empty($_POST["PaymentMethodOption"]) && ($_POST["PaymentMethodOption"] == 'Cash') )) {
-		$paymentMethod = test_input($_POST["PaymentMethodOption"]);
-	} else {
-		$paymentMethodErr = "Payment method not valid";
-	}
-	
-	
-	
-	if($paymentMethodErr =="" && $paymentDurationErr == "" && $nameErr == "" && $cardNumberErr == "" && $cvvErr == "" && $durationErr == "" && $paymentMethodErr ==""){
-	$stmt = $connect->prepare("INSERT INTO student_payment (paymentYear,userID,totalAmount,discount,amountPaid,startDate,endDate,paymentMethod,cashNote)
-									VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-
-	$stmt->bind_param("iiiiissss", $paymentYear, $userID, $totalAmount, $discount, $amountPaid, $startDate, $endDate, $paymentMethod, $cashNote);
-
-			$paymentYear=date("Y");
-			$userID=$_SESSION['userSession'];
-			$totalAmount=$totalAmount;
-			$discount=$discount;
-			$amountPaid=$amountPaid;
-			$startDate=$startDate;
-			$endDate=$newdate1;
-			$paymentMethod=$paymentMethod;
-			//
-			if($paymentMethod=='Cash'){$cashNote='0';}elseif($paymentMethod=='Card'){$cashNote=NULL;}
-			$cashNote=$cashNote;
-			//
-
-	$stmt->execute();
-	
-	$stmt->close();
-	header("Location: payments.php");
-	}
-
+if($_SESSION['userRole']== "Teacher"){
+    $user_login->redirect('index.php');
 }
 
+include_once($_SERVER['DOCUMENT_ROOT'].'/KidsCave/backend/dbconfig.php');
+include_once($_SERVER['DOCUMENT_ROOT'].'/KidsCave/backend/payments_frontend.php');
 
-
-function test_input($data) {
-  $data = trim($data);
-  $data = stripslashes($data);
-  $data = htmlspecialchars($data);
-  return $data;
-}
-function validateMonth($date){
-	$d = DateTime::createFromFormat('Y-m', $date);
-	if($d && $d->format('Y-m') == $date){
-	  return true;
-	}else{
-		return false;
-	}
-}
-
-$connect->close();
 ?>
 
 <!-- top html header -->
@@ -305,14 +101,16 @@ $connect->close();
 							<span class="text-danger"><?php echo $paymentMethodErr;?></span>
 						</div>
 					</div>
-					<div id="CardPaymentDiv" style="display:none;">
+                    <? echo $paymentMethod;?>
+                    <?php if(isset($nameErr) || isset($nameErr) ||isset($cardNumberErr) ||isset($durationErr) ||isset($cvvErr)){$cardErr=true;}?>
+					<div id="CardPaymentDiv" <?php if (isset($paymentMethod) && $paymentMethod!="Card") echo "style=\"display:none;";?>" >
 						<div class="form-group">
 							<div class= "row">
 								<div class="col-xs-6">
 									<label for="labelName">Name on Card</label>
 								</div>
 								<div class="col-xs-6">
-									<input disabled value="<?php echo $name;?>" name ="name" id="name" type="text" class="form-control" id="inputName" placeholder="A B C JOHN" required=""  minlength="4">
+									<input <?php if (isset($paymentMethod) && $paymentMethod!="Card") echo "disabled";?> value="<?php echo $name;?>" name ="name" id="name" type="text" class="form-control" id="inputName" placeholder="A B C JOHN" required=""  minlength="4">
 									<span class="text-danger"><?php echo $nameErr;?></span>
 								</div>
 							</div>
@@ -323,7 +121,7 @@ $connect->close();
 									<label for="labelCardNumber">Card Number</label>
 								</div>
 								<div class="col-xs-6">
-									<input disabled value="<?php echo $cardNumber;?>" name ="cardNumber" id="cardNumber" type="tell" value="" required="" data-required-message="Please enter card number." pattern="[0-9]{16,19}" max-length="19" autocomplete="off" class="form-control" id="inputCardNumber">
+									<input <?php if (isset($paymentMethod) && $paymentMethod!="Card") echo "disabled";?> value="<?php echo $cardNumber;?>" name ="cardNumber" id="cardNumber" type="tell" value="" required="" data-required-message="Please enter card number." pattern="[0-9]{16,19}" max-length="19" autocomplete="off" class="form-control" id="inputCardNumber">
 									<span class="text-danger"><?php echo $cardNumberErr;?></span>
 								</div>
 							</div>
@@ -334,7 +132,7 @@ $connect->close();
 									<label for="labelValidTill">Valid till</label>
 								</div>
 								<div class="col-xs-6">
-									<input disabled value="<?php echo $duration;?>" name="validTill" id="validTill" type="month" class="form-control" id="inputValidTill" placeholder="month/year">
+									<input <?php if (isset($paymentMethod) && $paymentMethod!="Card") echo "disabled";?> value="<?php echo $duration;?>" name="validTill" id="validTill" type="month" min="<?php echo date("Y-m",strtotime("today")); ?>" max="<?php echo date("Y-m",strtotime("+5 years")); ?>" class="form-control" id="inputValidTill" placeholder="month/year">
 									<span class="text-danger"><?php echo $durationErr;?></span>
 								</div>
 							</div>
@@ -345,7 +143,7 @@ $connect->close();
 									<label for="labelCVV">CVV</label>
 								</div>
 								<div class="col-xs-6">
-									<input disabled value="<?php echo $cvv;?>" type="number" class="form-control" name = "cvv" id="cvv" placeholder="xxx" required="" maxlength="3" pattern="([0-9]|[0-9]|[0-9])" autocomplete="off" >
+									<input <?php if (isset($paymentMethod) && $paymentMethod!="Card") echo "disabled";?> value="<?php echo $cvv;?>" type="text" class="form-control" name = "cvv" id="cvv" placeholder="xxx" required=""  pattern="\d{3}" autocomplete="off" >
 									<span class="text-danger"><?php echo $cvvErr;?></span>
 								</div>
 							</div>
@@ -388,8 +186,8 @@ function termEnable() {
 	document.getElementById("TotalPayment").innerHTML = "<?php echo "Rs " .$amounttopay; ?>";	
 }
 function yearEnable() {
-    document.getElementById("DiscountPercentage").innerHTML = "0 %";
-	document.getElementById("TotalPayment").innerHTML = "<?php echo "Rs " .$dueAmount; ?>";	
+    document.getElementById("DiscountPercentage").innerHTML = "15 %";
+	document.getElementById("TotalPayment").innerHTML = "<?php echo "Rs " .$dueAmount*0.85; ?>";
 }
 </script>
 <!-- footer -->

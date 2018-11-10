@@ -29,42 +29,36 @@ $row = $stmt->fetch(PDO::FETCH_ASSOC);
 			<!-- right panel -->
 			<div class="col-md-9" >
 				<form action="">
-					<select name="class1" onchange="showClass(this.value)">
-						<option value=0>Select the Class:</option>
-						<option  name='cl' value=1>ClassA</option>
-						<option name='cl' value=2>ClassB</option>
-						<option  name='cl' value=3>ClassC</option>
+					<select name="class" onchange="showClass(this.value)">
+						<option value="">Select the Class:</option>
+						<option value="classA">ClassA</option>
+						<option value="classB ">ClassB</option>
+						<option value="classC">ClassC</option>
 					</select>
 				</form>
 				<span id="txtHint"></span>
-				<div id="result2"></div>
 				<div id="result"></div>
-				<div class="well">
-				<button type="button" class="btn btn-primary" id='total'>Total Students</button>
-				<label id="st"></label>
-				</div>
-
 			</div>
 			<!-- right panel -->
 		</div>
 	</div>
 </div>
 <script>
-function showClass(int) {
-    if (int!=0) {
-			
-			console.log(int) ;
-          
-           $.ajax({  
-                url:"attendance_ajax_show.php",  
-                method:"POST",  
-                data:{int:int}, 
- 
-                success:function(data){  
-                     $('#result2').html(data);  
-                }  
-           });
-		}  
+function showClass(str) {
+    if (str.length == 0) {
+        document.getElementById("txtHint").innerHTML = "";
+        return;
+    } else {
+        var xmlhttp = new XMLHttpRequest();
+		//console.log(xmlhttp)
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                document.getElementById("txtHint").innerHTML = this.responseText;
+            }
+        };
+        xmlhttp.open("GET", "attendance_ajax_show.php?q=" + str, true);
+        xmlhttp.send();
+    }
 }
 </script>
 <script>
@@ -75,15 +69,14 @@ $(document).ready(function(){
 	$(document).on('click','input[type="radio"]', function(){
 	//$('input[type="radio"]').click(function(){ 
 		if (this.checked) {
-			var cl= $('select[name=class1]').val();
-			console.log(cl) ;
+			console.log(this.checked) 
            var status1 = $(this).val();
 			var id = $(this).attr("id"); 
 		   console.log(id) 
            $.ajax({  
                 url:"attendance_ajax_submit.php",  
                 method:"POST",  
-                data:{status1:status1,id:id,cl:cl}, 
+                data:{status1:status1,id:id}, 
  
                 success:function(data){  
                      $('#result').html(data);  
@@ -112,17 +105,6 @@ $(document).ready(function(){
            }); 
 		} 
       });  
-	  $('#total').click(function(){ 
-		  var cl=  $('select[name=class1]').val();
-		$.ajax({
-            method: "POST",
-            url: "attendance_ajax_total.php",
-			data:{cl:cl}, 
-            success:function(data){
-				$('#st').html(data);
-            }
-        }); 
-      });
 });
 </script>
 
